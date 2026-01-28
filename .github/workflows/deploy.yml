@@ -18,12 +18,36 @@ jobs:
         with:
           node-version: "20"
 
-      # Opcional: sirve para validar que package.json del backend está OK
+      # 1) Verificación dura: si no existe, paramos aquí.
+      - name: Verificar que existe package.json en backend
+        run: |
+          test -f backend/package.json || (echo "ERROR: backend/package.json no existe" && exit 1)
+          echo "OK: backend/package.json existe"
+          ls -la backend | head -n 50
+
+      # 2) (Opcional) instalar deps solo para validar (no se suben)
       - name: Instalar dependencias backend (check)
         run: |
           cd backend
-          npm install
+          npm ci || npm install
 
+      # 3) Preparar paquete de deploy limpio
+      - name: Preparar paquete de deploy
+        run: |
+          rm -rf deploy_backend
+          mkdir -p deploy_backend
+          rsync -av \
+            --exclude "node_modules" \
+            --exclude ".env" \
+            --exclude ".env.*" \
+            --exclude ".git" \
+            --exclude ".github" \
+            backend/ deploy_backend/
+          echo "Contenido a desplegar:"
+          ls -la deploy_backend | head -n 50
+          test -f deploy_backend/package.json || (echo "ERROR: deploy_backend/package.json no existe" && exit 1)
+
+      # 4) Deploy por FTP
       - name: Deploy backend por FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
@@ -33,19 +57,18 @@ jobs:
           protocol: ftp
           port: 21
 
-          # IMPORTANTE: como tu repo tiene /backend y /frontend, aquí debe ir /backend
-          local-dir: ./backend/
+          # OJO: subimos deploy_backend/ (donde package.json está garantizado)
+          local-dir: ./deploy_backend/
 
-          # Tu ruta deseada dentro de Node apps (RECOMENDADO)
+          # Ruta destino (ver nota debajo)
           server-dir: ./nodejs-apps/clinica_tratamientos/backend/
-
 
           dangerous-clean-slate: false
           exclude: |
-            node_modules/**
-            .env
-            .env.*
-            .git/**
-            .github/**
+            **/node_modules/**
+            **/.env
+            **/.env.*
+            **/.git/**
+            **/.github/**
             **/*.log
             **/.DS_Store
