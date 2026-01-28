@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
+    "start": "src/server.js",
     "migrate": "node src/migrations/run.js",
     "seed": "node src/seeds/run.js",
     "generate-hash": "node scripts/generateHash.js",
