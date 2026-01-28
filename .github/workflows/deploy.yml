@@ -1,4 +1,4 @@
-name: Deploy Clinica Backend a cPanel por FTP (DEBUG ROOT)
+name: Deploy Clinica Backend a cPanel por FTP
 on:
   push:
     branches:
@@ -6,25 +6,49 @@ on:
 
 jobs:
   ftp-deploy:
+    name: Deploy Backend a cPanel
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
 
-      - name: Verificar backend/package.json existe
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # 1) Verificación dura: si no existe, paramos aquí.
+      - name: Verificar que existe package.json en backend
         run: |
           test -f backend/package.json || (echo "ERROR: backend/package.json no existe" && exit 1)
           echo "OK: backend/package.json existe"
+          ls -la backend | head -n 50
 
+      # 2) (Opcional) instalar deps solo para validar (no se suben)
+      - name: Instalar dependencias backend (check)
+        run: |
+          cd backend
+          npm ci || npm install
+
+      # 3) Preparar paquete de deploy limpio
       - name: Preparar paquete de deploy
         run: |
           rm -rf deploy_backend
           mkdir -p deploy_backend
-          cp -R backend/* deploy_backend/
+          rsync -av \
+            --exclude "node_modules" \
+            --exclude ".env" \
+            --exclude ".env.*" \
+            --exclude ".git" \
+            --exclude ".github" \
+            backend/ deploy_backend/
+          echo "Contenido a desplegar:"
+          ls -la deploy_backend | head -n 50
           test -f deploy_backend/package.json || (echo "ERROR: deploy_backend/package.json no existe" && exit 1)
-          echo "Deploy package listo"
 
-      - name: FTP Deploy DEBUG
+      # 4) Deploy por FTP
+      - name: Deploy backend por FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -32,19 +56,19 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
           port: 21
+
+          # OJO: subimos deploy_backend/ (donde package.json está garantizado)
           local-dir: ./deploy_backend/
 
-          # 👇 Carpeta de prueba en la raíz real del FTP
-          server-dir: ./__DEPLOY_DEBUG_CLINICA__/
+          # Ruta destino (ver nota debajo)
+          server-dir: ./nodejs-apps/clinica_tratamientos/backend/
 
-          # 👇 Aquí sí limpiamos para evitar “mezclas”
-          dangerous-clean-slate: true
-
+          dangerous-clean-slate: false
           exclude: |
-            node_modules/**
-            .env
-            .env.*
-            .git/**
-            .github/**
+            **/node_modules/**
+            **/.env
+            **/.env.*
+            **/.git/**
+            **/.github/**
             **/*.log
             **/.DS_Store
