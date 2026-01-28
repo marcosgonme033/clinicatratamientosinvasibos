@@ -37,7 +37,8 @@ jobs:
           local-dir: ./backend/
 
           # Tu ruta deseada dentro de Node apps (RECOMENDADO)
-          server-dir: ./clinica_tratamientos/backend/
+          server-dir: ./nodejs-apps/clinica_tratamientos/backend/
+
 
           dangerous-clean-slate: false
           exclude: |
