@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS sessions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  client_id INT NOT NULL,
+  fecha DATETIME NOT NULL,
+  profesional VARCHAR(255) NOT NULL,
+  tratamiento VARCHAR(255) NOT NULL,
+  zona VARCHAR(255) NOT NULL,
+  producto VARCHAR(255),
+  lote VARCHAR(100),
+  cantidad DECIMAL(10, 2),
+  tecnica VARCHAR(255),
+  observaciones TEXT,
+  incidencias TEXT,
+  proxima_revision DATE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+  INDEX idx_client_id (client_id),
+  INDEX idx_fecha (fecha),
+  INDEX idx_tratamiento (tratamiento)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

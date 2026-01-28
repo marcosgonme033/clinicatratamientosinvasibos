@@ -1,0 +1,29 @@
+{
+  "name": "clinica-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "migrate": "node src/migrations/run.js",
+    "seed": "node src/seeds/run.js",
+    "generate-hash": "node scripts/generateHash.js",
+    "create-admin": "node scripts/createAdmin.js",
+    "fix-passwords": "node scripts/fixPasswords.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.22.4",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.1.5",
+    "dotenv": "^16.3.1",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5"
+  }
+}
