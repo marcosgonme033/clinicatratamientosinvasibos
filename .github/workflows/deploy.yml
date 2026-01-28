@@ -1,4 +1,4 @@
-name: Deploy Clinica Backend a cPanel por FTP
+name: Deploy Clinica Backend a cPanel por FTP (DEBUG ROOT)
 on:
   push:
     branches:
@@ -6,25 +6,25 @@ on:
 
 jobs:
   ftp-deploy:
-    name: Deploy Backend a cPanel
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout del repositorio
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      # Opcional: sirve para validar que package.json del backend está OK
-      - name: Instalar dependencias backend (check)
+      - name: Verificar backend/package.json existe
         run: |
-          cd backend
-          npm install
+          test -f backend/package.json || (echo "ERROR: backend/package.json no existe" && exit 1)
+          echo "OK: backend/package.json existe"
 
-      - name: Deploy backend por FTP
+      - name: Preparar paquete de deploy
+        run: |
+          rm -rf deploy_backend
+          mkdir -p deploy_backend
+          cp -R backend/* deploy_backend/
+          test -f deploy_backend/package.json || (echo "ERROR: deploy_backend/package.json no existe" && exit 1)
+          echo "Deploy package listo"
+
+      - name: FTP Deploy DEBUG
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -32,15 +32,14 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
           port: 21
+          local-dir: ./deploy_backend/
 
-          # IMPORTANTE: como tu repo tiene /backend y /frontend, aquí debe ir /backend
-          local-dir: ./backend/
+          # 👇 Carpeta de prueba en la raíz real del FTP
+          server-dir: ./__DEPLOY_DEBUG_CLINICA__/
 
-          # Tu ruta deseada dentro de Node apps (RECOMENDADO)
-          server-dir: ./nodejs-apps/clinica_tratamientos/backend/
+          # 👇 Aquí sí limpiamos para evitar “mezclas”
+          dangerous-clean-slate: true
 
-
-          dangerous-clean-slate: false
           exclude: |
             node_modules/**
             .env
