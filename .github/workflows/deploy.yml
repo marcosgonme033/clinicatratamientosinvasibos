@@ -1,0 +1,50 @@
+name: Deploy Clinica Backend a cPanel por FTP
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  ftp-deploy:
+    name: Deploy Backend a cPanel
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Opcional: sirve para validar que package.json del backend está OK
+      - name: Instalar dependencias backend (check)
+        run: |
+          cd backend
+          npm install
+
+      - name: Deploy backend por FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+
+          # IMPORTANTE: como tu repo tiene /backend y /frontend, aquí debe ir /backend
+          local-dir: ./backend/
+
+          # Tu ruta deseada dentro de Node apps (RECOMENDADO)
+          server-dir: ./clinica_tratamientos/backend/
+
+          dangerous-clean-slate: false
+          exclude: |
+            node_modules/**
+            .env
+            .env.*
+            .git/**
+            .github/**
+            **/*.log
+            **/.DS_Store
