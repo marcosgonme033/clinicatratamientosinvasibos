@@ -14,11 +14,27 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5050;
 
+// ---------- CORS ----------
+const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://localhost:5174'];
+
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+  : DEFAULT_ORIGINS;
+
+console.log(`\n🔒 CORS allowed origins: ${allowedOrigins.join(', ')}`);
+
 // Middlewares
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true
+  origin(origin, cb) {
+    // Permitir peticiones sin origin (curl, Postman, server-to-server)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -47,12 +63,12 @@ const startServer = async () => {
   try {
     // Log configuration (sin exponer password)
     console.log('\n📋 Server Configuration:');
-    console.log(`   PORT: ${process.env.PORT || 5050}`);
+    console.log(`   PORT: ${PORT}`);
     console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
     console.log(`   DB_HOST: ${process.env.DB_HOST}`);
     console.log(`   DB_NAME: ${process.env.DB_NAME}`);
     console.log(`   DB_USER: ${process.env.DB_USER}`);
-    console.log(`   CORS_ORIGIN: ${process.env.CORS_ORIGIN}`);
+    console.log(`   CORS_ORIGINS: ${allowedOrigins.join(', ')}`);
     console.log(`   JWT_SECRET: ${process.env.JWT_SECRET ? '✓ Set' : '✗ Missing'}\n`);
     
     const dbConnected = await testConnection();

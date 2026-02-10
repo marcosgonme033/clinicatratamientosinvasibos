@@ -20,12 +20,14 @@ export const sessionSchema = z.object({
   fecha: z.string().min(1, 'Fecha is required'),
   profesional: z.string().min(1, 'Profesional is required'),
   tratamiento: z.string().min(1, 'Tratamiento is required'),
-  zona: z.string().min(1, 'Zona is required'),
+  zona: z.string().optional().or(z.literal('')).nullable(),
   producto: z.string().optional().or(z.literal('')),
   lote: z.string().optional().or(z.literal('')),
-  cantidad: z.number().optional(),
+  cantidad: z.number().optional().nullable(),
   tecnica: z.string().optional().or(z.literal('')),
   observaciones: z.string().optional().or(z.literal('')),
-  incidencias: z.string().optional().or(z.literal('')),
-  proxima_revision: z.string().optional().or(z.literal(''))
+  incidencias: z.string().optional().or(z.literal('')).nullable(),
+  proxima_revision: z.string().optional().or(z.literal('')),
+  injection_points: z.any().optional(),
+  products_used: z.string().optional().or(z.literal('')).nullable()
 });

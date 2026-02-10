@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Modal from '../components/Modal';
 import FacialDiagram from '../components/FacialDiagram';
-import ProductsSummary from '../components/ProductsSummary';
 import { clientService, sessionService } from '../services/services';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,9 +21,13 @@ const ClientDetailPage = () => {
     fecha: '',
     profesional: '',
     tratamiento: '',
+    zona: '',
+    cantidad: '',
     observaciones: '',
+    incidencias: '',
     proxima_revision: '',
-    injection_points: []
+    injection_points: [],
+    face_view: 'front'
   });
 
   useEffect(() => {
@@ -51,13 +54,31 @@ const ClientDetailPage = () => {
   const handleOpenModal = (session = null) => {
     if (session) {
       setEditingSession(session);
+      // Parsear injection_points si es string
+      let injectionPoints = [];
+      if (session.injection_points) {
+        if (typeof session.injection_points === 'string') {
+          try {
+            injectionPoints = JSON.parse(session.injection_points);
+          } catch (e) {
+            console.warn('Failed to parse injection_points:', e);
+          }
+        } else if (Array.isArray(session.injection_points)) {
+          injectionPoints = session.injection_points;
+        }
+      }
+
       setFormData({
         fecha: session.fecha?.split('.')[0] || '',
         profesional: session.profesional,
         tratamiento: session.tratamiento,
+        zona: session.zona,
+        cantidad: session.cantidad || '',
         observaciones: session.observaciones || '',
+        incidencias: session.incidencias || '',
         proxima_revision: session.proxima_revision?.split('T')[0] || '',
-        injection_points: session.injection_points ? JSON.parse(session.injection_points) : []
+        injection_points: injectionPoints,
+        face_view: session.face_view || 'front'
       });
     } else {
       setEditingSession(null);
@@ -69,9 +90,13 @@ const ClientDetailPage = () => {
         fecha: localDateTime,
         profesional: user?.name || '',
         tratamiento: '',
-        observaciones: '',
-        proxima_revision: '',
-        injection_points: []
+        zona: '',
+        producto: '',
+        lote: '',
+        cantidad: '',
+        cantidad_revision: '',
+        injection_points: [],
+        face_view: 'front'
       });
     }
     setShowModal(true);
@@ -87,13 +112,14 @@ const ClientDetailPage = () => {
     try {
       // Calcular products_used a partir de injection_points
       const productsUsed = formData.injection_points.length > 0
-        ? [...new Set(formData.injection_points.map(p => p.product))].sort().join(',')
+        ? [...new Set(formData.injection_points.map(p => p.product).filter(Boolean))].sort().join(', ')
         : null;
 
       const data = {
         ...formData,
         client_id: parseInt(id),
-        injection_points: JSON.stringify(formData.injection_points),
+        cantidad: formData.cantidad ? parseFloat(formData.cantidad) : null,
+        injection_points: formData.injection_points, // Enviar como array, backend lo convertirá
         products_used: productsUsed
       };
 
@@ -121,10 +147,11 @@ const ClientDetailPage = () => {
     }
   };
 
-  const handleInjectionPointsChange = (points) => {
+  const handleInjectionPointsChange = (points, faceView) => {
     setFormData({
       ...formData,
-      injection_points: points
+      injection_points: points,
+      face_view: faceView
     });
   };
 
@@ -293,6 +320,7 @@ const ClientDetailPage = () => {
                       <div>
                         <h3 style={styles.sessionTitle}>
                           <span style={styles.sessionBadge}>{session.tratamiento}</span>
+                          <span style={styles.zonaBadge}>{session.zona}</span>
                         </h3>
                         <div style={styles.sessionDate}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -333,9 +361,19 @@ const ClientDetailPage = () => {
                       <div style={styles.detailItem}>
                         <strong>Profesional:</strong> {session.profesional}
                       </div>
+                      {session.cantidad && (
+                        <div style={styles.detailItem}>
+                          <strong>Cantidad:</strong> {session.cantidad} ml
+                        </div>
+                      )}
                       {session.observaciones && (
                         <div style={styles.detailItem}>
                           <strong>Observaciones:</strong> {session.observaciones}
+                        </div>
+                      )}
+                      {session.incidencias && (
+                        <div style={{...styles.detailItem, color: 'var(--warning)'}}>
+                          <strong>Incidencias:</strong> {session.incidencias}
                         </div>
                       )}
                       {session.proxima_revision && (
@@ -356,92 +394,105 @@ const ClientDetailPage = () => {
           isOpen={showModal}
           onClose={handleCloseModal}
           title={editingSession ? 'Editar Sesión' : 'Nueva Sesión'}
-          className="modal--nearFullscreen"
         >
-          <form onSubmit={handleSubmit} style={{ height: '100%' }}>
-            <div className="session-layout">
-              {/* Izquierda: Diagrama arriba + Resumen abajo */}
-              <div className="session-left">
-                <div className="session-diagram">
-                  <FacialDiagram 
-                    injectionPoints={formData.injection_points}
-                    onPointsChange={handleInjectionPointsChange}
-                  />
-                </div>
-                <div className="session-summary">
-                  <ProductsSummary
-                    points={formData.injection_points}
-                    onPointsChange={handleInjectionPointsChange}
-                  />
-                </div>
-              </div>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Fecha y Hora *</label>
+              <input
+                type="datetime-local"
+                name="fecha"
+                value={formData.fecha}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-              {/* Derecha: Formulario */}
-              <div className="session-right">
-                <div className="form-group">
-                  <label>Fecha y Hora *</label>
-                  <input
-                    type="datetime-local"
-                    name="fecha"
-                    value={formData.fecha}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+            <div className="form-group">
+              <label>Profesional *</label>
+              <input
+                type="text"
+                name="profesional"
+                value={formData.profesional}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-                <div className="form-group">
-                  <label>Profesional *</label>
-                  <input
-                    type="text"
-                    name="profesional"
-                    value={formData.profesional}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+            <div className="form-group">
+              <label>Tratamiento *</label>
+              <input
+                type="text"
+                name="tratamiento"
+                value={formData.tratamiento}
+                onChange={handleChange}
+                placeholder="Ej: Relleno ácido hialurónico"
+                required
+              />
+            </div>
 
-                <div className="form-group">
-                  <label>Tratamiento *</label>
-                  <input
-                    type="text"
-                    name="tratamiento"
-                    value={formData.tratamiento}
-                    onChange={handleChange}
-                    placeholder="Ej: Relleno ácido hialurónico"
-                    required
-                  />
-                </div>
+            <div className="form-group">
+              <label>Zona *</label>
+              <input
+                type="text"
+                name="zona"
+                value={formData.zona}
+                onChange={handleChange}
+                placeholder="Ej: Labios, Pómulos"
+                required
+              />
+            </div>
 
-                <div className="form-group">
-                  <label>Observaciones</label>
-                  <textarea
-                    name="observaciones"
-                    value={formData.observaciones}
-                    onChange={handleChange}
-                    rows={4}
-                  />
-                </div>
+            <div className="form-group">
+              <label>Cantidad (ml)</label>
+              <input
+                type="number"
+                step="0.1"
+                name="cantidad"
+                value={formData.cantidad}
+                onChange={handleChange}
+              />
+            </div>
 
-                <div className="form-group">
-                  <label>Próxima Revisión</label>
-                  <input
-                    type="date"
-                    name="proxima_revision"
-                    value={formData.proxima_revision}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
+            <div className="form-group">
+              <label>Observaciones</label>
+              <textarea
+                name="observaciones"
+                value={formData.observaciones}
+                onChange={handleChange}
+              />
+            </div>
 
-              {/* Footer */}
-              <div className="session-footer">
-                <button type="button" onClick={handleCloseModal} className="btn btn-secondary">
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Guardar
-                </button>
-              </div>
+            <div className="form-group">
+              <label>Incidencias</label>
+              <textarea
+                name="incidencias"
+                value={formData.incidencias}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Mapa Facial Interactivo */}
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <FacialDiagram injectionPoints={formData.injection_points} onPointsChange={handleInjectionPointsChange} />
+            </div>
+
+            <div className="form-group">
+              <label>Próxima Revisión</label>
+              <input
+                type="date"
+                name="proxima_revision"
+                value={formData.proxima_revision}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={handleCloseModal} className="btn btn-secondary">
+                Cancelar
+              </button>
+              <button type="submit" className="btn btn-primary">
+                Guardar
+              </button>
             </div>
           </form>
         </Modal>
@@ -654,7 +705,14 @@ const styles = {
     fontWeight: '700',
     letterSpacing: '0.3px'
   },
-
+  zonaBadge: {
+    background: 'var(--secondary)',
+    color: 'white',
+    padding: '6px 14px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '600'
+  },
   sessionDate: {
     fontSize: '13px',
     color: 'var(--gray-500)',
