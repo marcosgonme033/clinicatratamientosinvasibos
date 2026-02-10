@@ -5,25 +5,24 @@ const serverless = require("serverless-http");
 
 const app = express();
 
-// middlewares
+// ✅ Middleware para parsear JSON (sin esto req.body suele ser undefined)
 app.use(express.json());
 
-// 🔎 endpoint de prueba (muy importante)
+// 🔎 Endpoint de prueba
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// 🔐 AUTH (AJUSTA ESTO A TU CÓDIGO REAL)
+// 🔐 LOGIN (demo). Sustituye la lógica por la real cuando quieras.
 app.post("/auth/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
 
-  // aquí deberías llamar a tu lógica real
-  // esto es SOLO para probar que la ruta funciona
-  if (email && password) {
-    return res.json({ ok: true });
+  if (!email || !password) {
+    return res.status(400).json({ error: "Missing credentials" });
   }
 
-  res.status(400).json({ error: "Missing credentials" });
+  // ✅ Respuesta temporal para validar que ya NO hay 404
+  return res.json({ ok: true });
 });
 
 module.exports.handler = serverless(app);
